@@ -1,7 +1,8 @@
-import pytest
-import pytest_nlcov
-
 from importlib import reload
+
+import pytest
+
+import pytest_nlcov
 
 pytest_plugins = "pytester"
 

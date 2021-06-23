@@ -1,86 +1,129 @@
 import pathlib
-from typing import Dict, List
-import typer
-from io import StringIO
-from coverage import CoverageData
 
-import git
-from unidiff import PatchSet
 import pytest
+import typer
+
+from .cov import get_coveraged_lines_per_file
+from .data import LinesPerFile
+from .data import merge_lines
+from .format import format_lines
+from .git import get_new_lines_per_file
 
 
-def get_new_lines_per_file(revision: str) -> Dict[str, List[int]]:
-    repository = git.Repo(".")
-
-    uni_diff_text = repository.git.diff(revision, ignore_blank_lines=True, ignore_space_at_eol=True)
-
-    new_lines_per_file: Dict[str, List[int]] = {}
-
-    for patched_file in PatchSet(StringIO(uni_diff_text)):
-        file_path = str(pathlib.Path(patched_file.path).absolute())
-        new_lines = [
-            line.source_line_no
-            for hunk in patched_file
-            for line in hunk
-            if line.is_removed and line.value.strip() != ""
-        ]
-        new_lines_per_file[file_path] = new_lines
-
-    return new_lines_per_file
-
-
-def get_coveraged_lines_per_file() -> Dict[str, List[int]]:
-    coverage_data = CoverageData()
-    coverage_data.read()
-    return {measured_file: coverage_data.lines(measured_file) for measured_file in coverage_data.measured_files()}
+def make_relative(path: pathlib.Path) -> str:
+    return str(path.relative_to(str(pathlib.Path(".").resolve())))
 
 
 def nl_cov(revision: str) -> float:
     """
-    Get the coverage for added lines only.
+    Get the coverage for new lines only.
     """
-    new_lines_per_file = get_new_lines_per_file(revision)
+    typer.echo("New Line Coverage")
+    typer.echo("")
+
+    new_lines_per_file: LinesPerFile = {
+        file_path: new_lines
+        for file_path, new_lines in get_new_lines_per_file(revision).items()
+        if file_path.match("*.py")
+    }
 
     coveraged_lines_per_file = get_coveraged_lines_per_file()
-    print(coveraged_lines_per_file)
 
-    coveraged_newlines_per_file: Dict[str, List[int]] = {}
-    uncoveraged_newlines_per_file: Dict[str, List[int]] = {}
-    for file_path, new_lines in new_lines_per_file.items():
-        if not file_path.endswith(".py"):
+    lines_per_file = merge_lines(new_lines_per_file, coveraged_lines_per_file)
+
+    # Prepare the formatting strings, header, and column sorting.
+    max_name = max([len(make_relative(p)) for p in lines_per_file] + [5])
+    fmt_name = "%%- %ds  " % max_name
+    fmt_skip_covered = "\n%s file%s skipped due to complete coverage."
+    fmt_skip_empty = "\n%s empty file%s skipped."
+
+    header = (fmt_name % "Name") + " Lines   Miss"
+    fmt_coverage = fmt_name + "%6d %6d"
+
+    header += "%*s" % (9, "Cover")
+    fmt_coverage += " %%%ds" % (8,)
+
+    header += "   Missing"
+    fmt_coverage += "   %s"
+
+    rule = "-" * len(header)
+
+    # Write the header
+    typer.echo(header)
+    typer.echo(rule)
+
+    total_num_newlines = 0
+    total_num_covered = 0
+    for (p, new_lines) in lines_per_file.items():
+        num_newlines = len(
+            [
+                lineno
+                for lineno, line in new_lines.items()
+                if line.is_new is True and line.is_empty is False and line.is_executable is True
+            ]
+        )
+
+        if num_newlines == 0:
             continue
 
-        coveraged_lines = coveraged_lines_per_file.get(file_path, [])
-        coveraged_newlines_per_file[file_path] = [i for i in new_lines if i in coveraged_lines]
-        uncoveraged_newlines_per_file[file_path] = [i for i in new_lines if i not in coveraged_lines]
-
-        typer.echo(f"File: {file_path}")
-        typer.echo(
-            f" coveraged new lines  : {len(coveraged_newlines_per_file[file_path])} ({coveraged_newlines_per_file[file_path]})"
+        num_covered = len(
+            [
+                lineno
+                for lineno, line in new_lines.items()
+                if line.is_new is True
+                and line.is_executed is True
+                and line.is_empty is False
+                and line.is_executable is True
+            ]
         )
-        typer.echo(
-            f" uncoveraged new lines: {len(uncoveraged_newlines_per_file[file_path])} ({uncoveraged_newlines_per_file[file_path]})"
+        total_num_newlines += num_newlines
+        total_num_covered += num_covered
+
+        num_uncovered = num_newlines - num_covered
+
+        args = (
+            make_relative(p),
+            num_newlines,
+            num_uncovered,
+            f"{num_covered / num_newlines:.0%}",
+            format_lines(
+                [
+                    lineno
+                    for lineno, line in new_lines.items()
+                    if line.is_executed is not True and line.is_empty is False and line.is_executable is True
+                ]
+            ),
         )
 
-    number_of_lines_coveraged = sum(len(i) for i in coveraged_newlines_per_file.values())
-    number_of_lines_uncoveraged = sum(len(i) for i in uncoveraged_newlines_per_file.values())
-    coverage_newlines = (
-        number_of_lines_coveraged / (number_of_lines_coveraged + number_of_lines_uncoveraged)
-        if (number_of_lines_coveraged + number_of_lines_uncoveraged) > 0
-        else 1
-    )
-    typer.echo("")
-    typer.echo("Total: ")
-    typer.echo(f"  new lines   : {number_of_lines_uncoveraged + number_of_lines_coveraged}")
-    typer.echo(f"  uncoveraged : {number_of_lines_uncoveraged}")
-    typer.echo(f"  coveraged   : {number_of_lines_coveraged}")
-    typer.echo(f"  coverage             : {coverage_newlines:.1%}")
+        text = fmt_coverage % args
 
-    return coverage_newlines
+        typer.echo(text)
+
+    # Write a TOTAL line if we had at least one file.
+    if total_num_newlines > 0:
+        typer.echo(rule)
+        args = (
+            "TOTAL",
+            total_num_newlines,
+            total_num_newlines - total_num_covered,
+            f"{total_num_covered / total_num_newlines:.0%}",
+            "",
+        )
+
+        typer.echo(fmt_coverage % args)
+
+    return total_num_covered / total_num_newlines
 
 
 def cli():
     typer.run(nl_cov)
+
+
+def validate_fail_under(num_str):
+    try:
+        return int(num_str)
+    except ValueError:
+        return float(num_str)
 
 
 def pytest_addoption(parser, pluginmanager):
@@ -93,24 +136,51 @@ def pytest_addoption(parser, pluginmanager):
         help="Enable nlcov",
     )
     group.addoption(
-        "--nlcov_revision",
+        "--nlcov-revision",
         action="store",
         default="master",
         dest="nlcov_revision",
         help="Revision to determine the added lines",
     )
+    group.addoption(
+        "--nlcov-fail-under",
+        action="store",
+        type=validate_fail_under,
+        help="Fail if the total coverage is less",
+    )
 
 
 class NLCovPlugin:
     @pytest.mark.trylast
-    def pytest_nlcov(self, config):
-        coverage = show_nl_cov(config.option.nlcov_revision)
-        assert (
-            not config.option.cov_fail_under or coverage > config.option.cov_fail_under
-        ), "New line coverage is too low"
+    def pytest_terminal_summary(self, terminalreporter, config):
+        cov_plugin = config.pluginmanager.get_plugin("_cov")
+        if cov_plugin.cov_controller is None:
+            terminalreporter.write_line(f"No _cov plugin available")
+            return
+
+        if cov_plugin.cov_total is None:
+            terminalreporter.write_line(f"cov_total is None")
+            return
+
+        cov = cov_plugin.cov_controller.cov
+        if cov is None:
+            terminalreporter.write_line(f"Cov is None")
+            return
+
+        coverage = nl_cov(config.option.nlcov_revision)
+
+        if config.option.cov_fail_under is not None and config.option.cov_fail_under > 0:
+            failed = coverage < config.option.cov_fail_under
+            terminalreporter.write(
+                f'{"FAIL " if failed else ""}Required test coverage of {config.option.cov_fail_under}% {"not reached" if failed else "reached"}. '
+                f"Total coverage: {coverage:.2f}%\n",
+                **({"red": True, "bold": True} if failed else {"green": True}),
+            )
 
 
 def pytest_configure(config):  # pragma: no cover
-    # NOTE: if cov is missing we fail silently
-    if config.option.nlcov and config.pluginmanager.has_plugin("_cov"):
+    if config.option.nlcov:
+        if not config.pluginmanager.has_plugin("_cov"):
+            typer.echo("nlcov is enabled, but pytest-cov is not installed, so nlcov is not executed.")
+            return
         config.pluginmanager.register(NLCovPlugin())

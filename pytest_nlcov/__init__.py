@@ -90,7 +90,10 @@ def nl_cov(revision: str) -> float:
                 [
                     lineno
                     for lineno, line in new_lines.items()
-                    if line.is_executed is not True and line.is_empty is False and line.is_executable is True
+                    if line.is_new is True
+                    and line.is_executed is not True
+                    and line.is_empty is False
+                    and line.is_executable is True
                 ]
             ),
         )
@@ -112,7 +115,7 @@ def nl_cov(revision: str) -> float:
 
         typer.echo(fmt_coverage % args)
 
-    return total_num_covered / total_num_newlines
+    return total_num_covered / total_num_newlines if total_num_newlines else 1
 
 
 def cli():
@@ -128,13 +131,6 @@ def validate_fail_under(num_str):
 
 def pytest_addoption(parser, pluginmanager):
     group = parser.getgroup("nlcov")
-    group.addoption(
-        "--nlcov",
-        action="store_true",
-        default=False,
-        dest="nlcov",
-        help="Enable nlcov",
-    )
     group.addoption(
         "--nlcov-revision",
         action="store",
@@ -179,8 +175,7 @@ class NLCovPlugin:
 
 
 def pytest_configure(config):  # pragma: no cover
-    if config.option.nlcov:
-        if not config.pluginmanager.has_plugin("_cov"):
-            typer.echo("nlcov is enabled, but pytest-cov is not installed, so nlcov is not executed.")
-            return
-        config.pluginmanager.register(NLCovPlugin())
+    if not config.pluginmanager.has_plugin("_cov"):
+        typer.echo("nlcov is installed, but pytest-cov is not installed, so nlcov will not be executed.")
+        return
+    config.pluginmanager.register(NLCovPlugin())

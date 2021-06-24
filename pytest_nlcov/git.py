@@ -20,4 +20,8 @@ def get_new_lines_per_file(revision: str) -> LinesPerFile:
                 line.is_new = hunk_line.is_added
                 line.is_empty = hunk_line.value.strip() == ""
 
+    # Note: this function does not (yet) mark the whole statement as new, but just a line
+    # So in case of a multiline statement, the statement is only marked as new as the first
+    # of the statement is matched
+
     return lines_per_file

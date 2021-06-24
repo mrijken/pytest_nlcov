@@ -42,7 +42,7 @@ known_first_party = ["pytest_nlcov"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--nlcov --cov=pytest_nlcov --cov-report xml:coverage.xml --cov-report term-missing"
+addopts = "--doctest-modules --doctest-glob=\"*.md\" --cov=pytest_nlcov --cov-report xml:coverage.xml --cov-report term-missing"
 testpaths = [
     "tests"
 ]

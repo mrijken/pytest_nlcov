@@ -3,9 +3,8 @@ import pathlib
 import pytest
 import typer
 
-from .cov import get_coveraged_lines_per_file
-from .data import LinesPerFile
-from .data import merge_lines
+from .cov import mark_coveraged_lines_per_file
+from .cov import mark_executable_lines_per_file
 from .format import format_lines
 from .git import get_new_lines_per_file
 
@@ -21,18 +20,13 @@ def nl_cov(revision: str) -> float:
     typer.echo("New Line Coverage")
     typer.echo("")
 
-    new_lines_per_file: LinesPerFile = {
-        file_path: new_lines
-        for file_path, new_lines in get_new_lines_per_file(revision).items()
-        if file_path.match("*.py")
-    }
+    new_lines_per_file = get_new_lines_per_file(revision, glob="*.py")
 
-    coveraged_lines_per_file = get_coveraged_lines_per_file()
-
-    lines_per_file = merge_lines(new_lines_per_file, coveraged_lines_per_file)
+    mark_executable_lines_per_file(new_lines_per_file)
+    mark_coveraged_lines_per_file(new_lines_per_file)
 
     # Prepare the formatting strings, header, and column sorting.
-    max_name = max([len(make_relative(p)) for p in lines_per_file] + [5])
+    max_name = max([len(make_relative(p)) for p in new_lines_per_file] + [5])
     fmt_name = "%%- %ds  " % max_name
     fmt_skip_covered = "\n%s file%s skipped due to complete coverage."
     fmt_skip_empty = "\n%s empty file%s skipped."
@@ -54,13 +48,9 @@ def nl_cov(revision: str) -> float:
 
     total_num_newlines = 0
     total_num_covered = 0
-    for (p, new_lines) in lines_per_file.items():
+    for (p, new_lines) in new_lines_per_file.items():
         num_newlines = len(
-            [
-                lineno
-                for lineno, line in new_lines.items()
-                if line.is_new is True and line.is_empty is False and line.is_executable is True
-            ]
+            [lineno for lineno, line in new_lines.items() if line.is_empty is False and line.is_executable is True]
         )
 
         if num_newlines == 0:
@@ -70,10 +60,7 @@ def nl_cov(revision: str) -> float:
             [
                 lineno
                 for lineno, line in new_lines.items()
-                if line.is_new is True
-                and line.is_executed is True
-                and line.is_empty is False
-                and line.is_executable is True
+                if line.is_executed is True and line.is_empty is False and line.is_executable is True
             ]
         )
         total_num_newlines += num_newlines
@@ -90,10 +77,7 @@ def nl_cov(revision: str) -> float:
                 [
                     lineno
                     for lineno, line in new_lines.items()
-                    if line.is_new is True
-                    and line.is_executed is not True
-                    and line.is_empty is False
-                    and line.is_executable is True
+                    if line.is_executed is not True and line.is_empty is False and line.is_executable is True
                 ]
             ),
         )
@@ -129,8 +113,8 @@ def validate_fail_under(num_str):
         return float(num_str)
 
 
-def pytest_addoption(parser, pluginmanager):
-    group = parser.getgroup("nlcov")
+def pytest_addoption(parser):
+    group = parser.getgroup("coverage for new lines")
     group.addoption(
         "--nlcov-revision",
         action="store",
@@ -151,16 +135,16 @@ class NLCovPlugin:
     def pytest_terminal_summary(self, terminalreporter, config):
         cov_plugin = config.pluginmanager.get_plugin("_cov")
         if cov_plugin.cov_controller is None:
-            terminalreporter.write_line(f"No _cov plugin available")
+            terminalreporter.write_line("No _cov plugin available")
             return
 
         if cov_plugin.cov_total is None:
-            terminalreporter.write_line(f"cov_total is None")
+            terminalreporter.write_line("cov_total is None")
             return
 
         cov = cov_plugin.cov_controller.cov
         if cov is None:
-            terminalreporter.write_line(f"Cov is None")
+            terminalreporter.write_line("Cov is None")
             return
 
         coverage = nl_cov(config.option.nlcov_revision)

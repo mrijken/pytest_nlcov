@@ -1,5 +1,6 @@
 import pathlib
 from io import StringIO
+from typing import Optional
 
 import git
 from unidiff import PatchSet
@@ -8,20 +9,27 @@ from .data import LinesPerFile
 from .data import lines_per_file_factory
 
 
-def get_new_lines_per_file(revision: str) -> LinesPerFile:
-    uni_diff_text = git.Repo(".").git.diff(revision, ignore_blank_lines=True, ignore_space_at_eol=True)
+def get_diff(revision: str):
+    return git.Repo(".").git.diff(revision, ignore_blank_lines=True, ignore_space_at_eol=True)
+
+
+def get_new_lines_per_file(revision: str, glob: Optional[str] = None) -> LinesPerFile:
+    """
+    Get all lines which are new according to git.
+    """
+    uni_diff_text = get_diff(revision)
 
     lines_per_file = lines_per_file_factory()
 
     for patched_file in PatchSet(StringIO(uni_diff_text)):
+        file_path = pathlib.Path(patched_file.path).resolve()
+        if glob and not file_path.match(glob):
+            continue
         for hunk in patched_file:
             for hunk_line in hunk:
-                line = lines_per_file[pathlib.Path(patched_file.path).resolve()][hunk_line.target_line_no]
-                line.is_new = hunk_line.is_added
+                if hunk_line.target_line_no is None or not hunk_line.is_added:
+                    continue
+                line = lines_per_file[file_path][hunk_line.target_line_no]
                 line.is_empty = hunk_line.value.strip() == ""
-
-    # Note: this function does not (yet) mark the whole statement as new, but just a line
-    # So in case of a multiline statement, the statement is only marked as new as the first
-    # of the statement is matched
 
     return lines_per_file

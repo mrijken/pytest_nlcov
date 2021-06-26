@@ -15,7 +15,7 @@ is not installed yet.
 
 ## Usage with pytest
 
-When `pytest_nlcov` is installed, it will be discovered by pytest and excuted as last step to
+When `pytest_nlcov` is installed, it will be discovered by pytest and executed as last step to
 show you the test coverage of new lines.
 
 ```sh
@@ -45,7 +45,7 @@ pytest --nlcov-fail-under 0.6
 
 ## Usage without pytest
 
-`pytest_nlcov` can be runned without pytest. Therefor you have to run `coverage` first, because `pytest_nlcov`
+`pytest_nlcov` can be run without pytest. Therefor you have to run `coverage` first, because `pytest_nlcov`
 needs its coverage data.
 
 ```sh
@@ -53,7 +53,7 @@ coverage
 nlcov
 ```
 
-Optionally a revison can be given
+Optionally a revision can be given
 
 ```sh
 nlcov main

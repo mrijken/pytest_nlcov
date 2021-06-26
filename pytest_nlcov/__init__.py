@@ -13,7 +13,7 @@ def make_relative(path: pathlib.Path) -> str:
     return str(path.relative_to(str(pathlib.Path(".").resolve())))
 
 
-def nl_cov(revision: str) -> float:
+def nl_cov(revision: str = "master") -> float:
     """
     Get the coverage for new lines only.
     """

@@ -20,6 +20,13 @@ def mark_coveraged_lines_per_file(lines_per_file: LinesPerFile):
     """ """
     coverage_data = get_coverage_data()
 
+    # remove first the files which have new lines but are not included in the coverage
+    covered_files = set(coverage_data.keys())
+    newline_files = set(lines_per_file.keys())
+    not_covered_newline_files = newline_files - covered_files
+    for file in not_covered_newline_files:
+        del lines_per_file[file]
+
     for measured_file, coveraged_linenos in coverage_data.items():
         if measured_file not in lines_per_file:
             continue

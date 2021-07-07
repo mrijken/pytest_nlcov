@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pytest_nlcov"
 version = "0.2.0"
-description = ""
+description = "Pytest plugin to get the coverage of the new lines (based on git diff) only"
 authors = ["Marc Rijken <marc@rijken.org>"]
 license = "MIT"
 repository = "https://github.com/mrijken/pytest_nlcov"

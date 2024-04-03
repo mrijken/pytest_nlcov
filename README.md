@@ -32,7 +32,7 @@ Two option can be given:
 Default, the new lines are based on the git diff with master. You can specify other revisions.
 
 ```sh
-pytest --nlcov-revision main
+pytest --col=myproj --nlcov-revision main
 ```
 
 ### Fail Threshold
@@ -40,8 +40,13 @@ pytest --nlcov-revision main
 Optionally you can add a threshold to fail the tests when the coverage is below the threshold.
 
 ```sh
-pytest --nlcov-fail-under 0.6
+pytest --col=myproj --nlcov-fail-under 0.6
 ```
+
+### Note
+It's important to include `--col` to load the **pytest_cov** plugin; otherwise an error message will appear saying:
+> nlcov is installed, but pytest-cov is not installed, so nlcov will not be executed.
+
 
 ## Usage without pytest
 

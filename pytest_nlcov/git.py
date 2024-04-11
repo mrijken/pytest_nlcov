@@ -5,8 +5,8 @@ from typing import Optional
 import git
 from unidiff import PatchSet
 
-from .data import LinesPerFile
-from .data import lines_per_file_factory
+from pytest_nlcov.data import LinesPerFile
+from pytest_nlcov.data import lines_per_file_factory
 
 
 def get_diff(revision: str):

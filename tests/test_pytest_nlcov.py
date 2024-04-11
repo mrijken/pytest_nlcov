@@ -1,9 +1,3 @@
-import pytest
-from pytest import UsageError
-
-from pytest_nlcov import NLCovPlugin
-
-
 def test_options(pytester):
     config = pytester.parseconfig("")
     assert config.option.nlcov_revision == "master"

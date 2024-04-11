@@ -3,10 +3,10 @@ import pathlib
 import pytest
 import typer
 
-from .cov import mark_coveraged_lines_per_file
-from .cov import mark_executable_lines_per_file
-from .format import format_lines
-from .git import get_new_lines_per_file
+from pytest_nlcov.cov import mark_coveraged_lines_per_file
+from pytest_nlcov.cov import mark_executable_lines_per_file
+from pytest_nlcov.format import format_lines
+from pytest_nlcov.git import get_new_lines_per_file
 
 
 def make_relative(path: pathlib.Path) -> str:
@@ -28,8 +28,6 @@ def nl_cov(revision: str = "master") -> float:
     # Prepare the formatting strings, header, and column sorting.
     max_name = max([len(make_relative(p)) for p in new_lines_per_file] + [5])
     fmt_name = "%%- %ds  " % max_name
-    fmt_skip_covered = "\n%s file%s skipped due to complete coverage."
-    fmt_skip_empty = "\n%s empty file%s skipped."
 
     header = (fmt_name % "Name") + " Lines   Miss"
     fmt_coverage = fmt_name + "%6d %6d"
@@ -48,7 +46,7 @@ def nl_cov(revision: str = "master") -> float:
 
     total_num_newlines = 0
     total_num_covered = 0
-    for (p, new_lines) in new_lines_per_file.items():
+    for p, new_lines in new_lines_per_file.items():
         num_newlines = len(
             [lineno for lineno, line in new_lines.items() if line.is_empty is False and line.is_executable is True]
         )

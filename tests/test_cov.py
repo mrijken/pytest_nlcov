@@ -19,7 +19,12 @@ def test_mark_coveraged_lines_per_file(mocker):
     cov.mark_coveraged_lines_per_file(lines_per_file)
     assert list(lines_per_file.keys()) == ["test.py"]
     assert list(lines_per_file["test.py"]) == [1, 2, 3, 10]
-    assert [i.is_executed for _, i in lines_per_file["test.py"].items()] == [True, True, True, True]
+    assert [i.is_executed for _, i in lines_per_file["test.py"].items()] == [
+        True,
+        True,
+        True,
+        True,
+    ]
 
 
 class MockPythonParser:

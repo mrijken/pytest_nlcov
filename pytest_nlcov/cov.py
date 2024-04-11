@@ -3,7 +3,7 @@ import pathlib
 from coverage import CoverageData
 from coverage import parser
 
-from .data import LinesPerFile
+from pytest_nlcov.data import LinesPerFile
 
 
 def get_coverage_data():
@@ -30,7 +30,7 @@ def mark_coveraged_lines_per_file(lines_per_file: LinesPerFile):
     for measured_file, coveraged_linenos in coverage_data.items():
         if measured_file not in lines_per_file:
             continue
-        for coveraged_lineno in coveraged_linenos:
+        for coveraged_lineno in coveraged_linenos or []:
             if coveraged_lineno not in lines_per_file[measured_file]:
                 continue
             lines_per_file[measured_file][coveraged_lineno].is_executed = True
@@ -45,7 +45,7 @@ def get_python_parser(file_path) -> parser.PythonParser:
     return parsed_file
 
 
-def mark_executable_lines_per_file(lines_per_file: LinesPerFile) -> LinesPerFile:
+def mark_executable_lines_per_file(lines_per_file: LinesPerFile):
     """
     Mark the executable lines based on a Python parser.
     When a line is marked as new and it belongs to a multiline statement,

@@ -10,7 +10,7 @@ just for those lines
 pip install pytest_nlcov
 ```
 
-Note: `pytest_cov` is required and will be automatically installed when it 
+Note: `pytest_cov` is required and will be automatically installed when it
 is not installed yet.
 
 ## Usage with pytest
@@ -22,17 +22,18 @@ show you the test coverage of new lines.
 pytest
 ```
 
-Two option can be given:
+Three options can be given:
 
 - revision
 - fail threshold
+- root_dir
 
 ### Revision
 
 Default, the new lines are based on the git diff with master. You can specify other revisions.
 
 ```sh
-pytest --cov=myproj --nlcov-revision main
+pytest --cov=myproj --nlcov-revision=main
 ```
 
 ### Fail Threshold
@@ -40,8 +41,18 @@ pytest --cov=myproj --nlcov-revision main
 Optionally you can add a threshold to fail the tests when the coverage is below the threshold.
 
 ```sh
-pytest --cov=myproj --nlcov-fail-under 0.6
+pytest --cov=myproj --nlcov-fail-under=0.6
 ```
+
+### Root Dir
+
+Optionally you can set the root dir of the git repo, so the command can be run from another directory that is
+not the root of the repo.
+
+```sh
+pytest --cov=myproj --nlcov-root-dir=repo_dir
+```
+
 
 ### Note
 It's important to include `--cov` to load the **pytest_cov** plugin; otherwise an error message will appear saying:

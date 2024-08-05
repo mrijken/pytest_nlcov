@@ -52,9 +52,11 @@ index 1f38447..0000000
 -This file will be removed.
 \ No newline at end of file
 """
-    mocker.patch("pytest_nlcov.git.get_diff", lambda _: diff)
+    mocker.patch("pytest_nlcov.git.get_diff", lambda _, __: diff)
 
-    new_lines_per_file = git.get_new_lines_per_file("master")
+    new_lines_per_file = git.get_new_lines_per_file(
+        "master",
+    )
 
     assert [str(i).split("/")[-1] for i in new_lines_per_file.keys()] == [
         "added_file.py",

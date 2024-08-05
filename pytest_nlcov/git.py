@@ -9,15 +9,15 @@ from pytest_nlcov.data import LinesPerFile
 from pytest_nlcov.data import lines_per_file_factory
 
 
-def get_diff(revision: str):
-    return git.Repo(".").git.diff(revision, ignore_blank_lines=True, ignore_space_at_eol=True)
+def get_diff(revision: str, root_dir: str) -> str:
+    return git.Repo(root_dir).git.diff(revision, ignore_blank_lines=True, ignore_space_at_eol=True)
 
 
-def get_new_lines_per_file(revision: str, glob: Optional[str] = None) -> LinesPerFile:
+def get_new_lines_per_file(revision: str, glob: Optional[str] = None, root_dir: str = ".") -> LinesPerFile:
     """
     Get all lines which are new according to git.
     """
-    uni_diff_text = get_diff(revision)
+    uni_diff_text = get_diff(revision, root_dir)
 
     lines_per_file = lines_per_file_factory()
 

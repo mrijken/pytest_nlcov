@@ -13,14 +13,14 @@ def make_relative(path: pathlib.Path) -> str:
     return str(path.relative_to(str(pathlib.Path(".").resolve())))
 
 
-def nl_cov(revision: str = "master") -> float:
+def nl_cov(revision: str = "master", root_dir: str = ".") -> float:
     """
     Get the coverage for new lines only.
     """
     typer.echo("New Line Coverage")
     typer.echo("")
 
-    new_lines_per_file = get_new_lines_per_file(revision, glob="*.py")
+    new_lines_per_file = get_new_lines_per_file(revision, glob="*.py", root_dir=root_dir)
 
     mark_executable_lines_per_file(new_lines_per_file)
     mark_coveraged_lines_per_file(new_lines_per_file)
@@ -121,6 +121,13 @@ def pytest_addoption(parser):
         help="Revision to determine the added lines",
     )
     group.addoption(
+        "--nlcov-root-dir",
+        action="store",
+        default=".",
+        dest="root_dir",
+        help="Root directory of the git repository",
+    )
+    group.addoption(
         "--nlcov-fail-under",
         action="store",
         type=validate_fail_under,
@@ -145,7 +152,7 @@ class NLCovPlugin:
             terminalreporter.write_line("Cov is None")
             return
 
-        coverage = nl_cov(config.option.nlcov_revision)
+        coverage = nl_cov(config.option.nlcov_revision, config.option.root_dir)
 
         if config.option.cov_fail_under is not None and config.option.cov_fail_under > 0:
             failed = coverage < config.option.cov_fail_under
